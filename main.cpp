@@ -10,7 +10,7 @@
 #include "airportnode.h"
 #include "edgeroute.h"
 
-#define RADIUS 6371
+#define RADIUS 3959
 #define PI 3.14159
 
 
@@ -209,10 +209,11 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
         }
 
 
-        cout<<"Leave "<<stack[stack.size()-1].name<<"("<<stack[stack.size()-1].city<<")"<<" on "<<stack[stack.size()-2].airline<<" after flying "<<stack[stack.size()-2].distance<<" miles."<<endl;
-        for(int i = stack.size()-2;i>=1;i--)
+        cout<<"Leave "<<stack[stack.size()-1].name<<"("<<stack[stack.size()-1].city<<")"<<" on "<<stack[stack.size()-2].airline<<" after flying "<<stack[stack.size()-2].distance-stack[stack.size()-1].distance<<" miles."<<endl;
+
+        for(int i = stack.size()-2;i>=2;i--)
         {
-            cout<<"Change planes at "<<stack[i].name<<"("<<stack[i].city<<")"<<" to "<<stack[i-1].airline<<" and fly "<<stack[i-1].distance<<" miles."<<endl;
+            cout<<"Change planes at "<<stack[i].name<<"("<<stack[i].city<<")"<<" to "<<stack[i-1].airline<<" and fly "<<stack[i-2].distance - stack[i-1].distance<<" miles."<<endl;
         }
         cout<<"Arrive at "<<stack[0].name<< "." <<endl;
 
