@@ -13,10 +13,11 @@
 #define RADIUS 3959
 #define PI 3.14159
 
-
+//Determines shortest between two airpots using Dijkstra's Algorithm
 
 using namespace std;
 
+//used for visited airports
 struct node
 {
     int id;
@@ -25,7 +26,8 @@ struct node
     string airline;
     string IATA;
     double distance;
-    int prevnode;
+
+    int prevnode;                   //to trace path
 
     node(int ID, string n, string c,string al,string iata,double d, int p):id(ID),name(n),city(c),airline(al),IATA(iata),distance(d),prevnode(p)
     {
@@ -33,7 +35,7 @@ struct node
     }
 };
 
-
+//comparator for aiports based on distance
 struct lessThan
 {
     bool operator()(const airportnode& a1, const airportnode& a2)
@@ -41,6 +43,7 @@ struct lessThan
         return a1.distance > a2.distance;
     }
 };
+
 
 //reads file of airports and creates keys to empty edge vectors
 
@@ -51,13 +54,14 @@ void addEdges(map<airportnode,vector<edgeroute>> &themap);
 
 
 
-//Great Circle Distance
+//distance between two airports
 double greatCircleDistance(double lat1, double long1, double lat2, double long2);
-
 
 
 bool getInput(string &source, string &destination);
 
+
+//implements dijkstra's algorithm to obtain shortest distance between airports
 void getPath(map<airportnode, vector< edgeroute >> graph, int src, int dest);
 
 int main(int argc, char *argv[])
@@ -69,21 +73,23 @@ int main(int argc, char *argv[])
     map <string, int> iataMap;
 
 
+    //initialize the data base for storing airports and routes
     cout << "Loading data..." << endl;
     initializeVertices(airportGraph,iataMap);
-    cout<<"Finished vert"<<endl;
-
     addEdges(airportGraph);
-
     cout << "Loaded!";
 
-    string srce,destin;
-    int source, destination;
+
+    string srce,destin;     //user inputted source and destination
+    int source, destination;//transform to user id because search is by id, not iata
+
+
+
     while(getInput(srce,destin))
     {
 
 
-
+        //to upper case
         transform(srce.begin(),srce.end(),srce.begin(),::toupper);
         transform(destin.begin(),destin.end(),destin.begin(),::toupper);
 
@@ -92,6 +98,7 @@ int main(int argc, char *argv[])
         }
         else
         {
+            //get user input and determine the shortest path
             source = iataMap[srce];
             destination = iataMap[destin];
             getPath(airportGraph,source,destination);
@@ -108,7 +115,12 @@ int main(int argc, char *argv[])
 
 
 
-
+/**
+ * @brief getInput
+ * @param source
+ * @param destination
+ * @return if user as further added input
+ */
 bool getInput(string &source, string &destination)
 {
     cout<<"\n\nEnter src airport code: ";
@@ -118,6 +130,13 @@ bool getInput(string &source, string &destination)
     return !source.empty() && !destination.empty();
 }
 
+
+/**
+ * @brief implement dijkstra's to determine shortest distance between two airports
+ * @param graph, airport->list of routes
+ * @param src, source airport
+ * @param dest, destination airport
+ */
 void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
 {
     //dijkstra
@@ -125,12 +144,13 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
     vector<airportnode> Queue;
     //priority_queue<airportnode> Queue;
 
+    //used as heap structure to determine current shortest path, see PQ structure for algorithm
     for(map<airportnode,vector<edgeroute>>::iterator it = graph.begin();it!=graph.end();++it)
     {
         Queue.push_back(airportnode(it->first.id,it->first.name,it->first.city,it->first.country,it->first.iata,it->first.icao,it->first.lat,it->first.lon));
     }
 
-
+    //assign starting point to 0
     for(unsigned int i = 0;i<Queue.size();i++)
     {
         if(Queue[i].id == src )
@@ -139,6 +159,8 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
         }
     }
 
+
+    //keeps tracks of visited nodes
     vector<node> visited;
 
     //get smallest element
@@ -151,19 +173,20 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
     Queue.erase(Queue.begin());
 
 
-
+    //while destination is not reached
     while(shortest.id != dest)
     {
+        //set of all routes from airport
         vector<edgeroute> edgeSet = graph.at(shortest.id);
 
-
+        //examine current edges to all edges
         for(unsigned int i = 0;i<edgeSet.size();i++)
         {
             for(unsigned int j = 0;j<Queue.size();j++)
             {
                 if(edgeSet[i].destID == Queue[j].id)
                 {
-
+                    //if the current edge distance is shorter, then update, see algorithm
                     double newDist = edgeSet[i].weight + shortest.distance;
                     if(newDist < Queue[j].distance)
                     {
@@ -176,18 +199,22 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
                 }
             }
         }
+        //make heap to determine new shortest airport
         make_heap(Queue.begin(),Queue.end(),lessThan());
         shortest = Queue.front();
+        //add to visited
         visited.push_back(node(shortest.id,shortest.name,shortest.city,shortest.airline,shortest.iata,shortest.distance,shortest.prev));
+        //pop this shortest distance and repeat
         Queue.erase(Queue.begin());
     }
 
 
 
 
-        vector<node> stack;
+        vector<node> stack;         //holds airports return path
         int i = visited.size()-1;
         bool found = false;
+        //loop through visited until the the prev node returns to source airport
         while(!found)
         {
             for(unsigned int j = 0;j < visited.size(); j++)
@@ -209,6 +236,7 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
         }
 
 
+        //output stack in reverse  to obtain itinerary
         cout<<"Leave "<<stack[stack.size()-1].name<<"("<<stack[stack.size()-1].city<<")"<<" on "<<stack[stack.size()-2].airline<<" after flying "<<stack[stack.size()-2].distance-stack[stack.size()-1].distance<<" miles."<<endl;
 
         for(int i = stack.size()-2;i>=2;i--)
@@ -221,6 +249,13 @@ void getPath(map<airportnode, vector<edgeroute> > graph, int src, int dest)
 
 }
 
+
+
+/**
+ * @brief get vertices of graph from airport file
+ * @param themap
+ * @param iataMap to join iata to id in airpots file
+ */
 void initializeVertices(map<airportnode,vector<edgeroute>> &themap, map<string, int> &iataMap)
 {
     QDomDocument document;
@@ -266,6 +301,12 @@ void initializeVertices(map<airportnode,vector<edgeroute>> &themap, map<string, 
     }
 }
 
+
+
+/**
+ * @brief get graph edges from routes file
+ * @param themap to add edges to
+ */
 void addEdges(map<airportnode,vector<edgeroute>> &themap)
 {
     QDomDocument document;
@@ -295,39 +336,16 @@ void addEdges(map<airportnode,vector<edgeroute>> &themap)
         int airlineID = items.at(1).toElement().text().toInt();
         string src = items.at(2).toElement().text().toStdString();
         int srcID = items.at(3).toElement().text().toInt();
-        string dest =items.at(4).toElement().text().toStdString();
-        int destID = items.at(5).toElement().text().toInt();
+        double latitude1 = items.at(4).toElement().text().toDouble();
+        double longitude1 = items.at(5).toElement().text().toDouble();
+        string dest =items.at(6).toElement().text().toStdString();
+        int destID = items.at(7).toElement().text().toInt();
+        double latitude2 = items.at(8).toElement().text().toDouble();
+        double longitude2 = items.at(9).toElement().text().toDouble();
 
 
         if(srcID)
         {
-            double latitude1, longitude1,latitude2,longitude2;
-            bool source = 0, destination = 0;
-
-
-            //find better way
-            for(map<airportnode,vector<edgeroute>>::iterator it = themap.begin();it!=themap.end();++it)
-            {
-
-                if(srcID == it->first.id)
-                {
-                    latitude1 = it->first.lat;
-                    longitude1 =it->first.lon;
-                    source = 1;
-
-                }
-
-                if(destID == it->first.id)
-                {
-                    latitude2 = it->first.lat;
-                    longitude2 = it->first.lon;
-                    destination = 1;
-                }
-                if (source && destination)
-                    break;
-
-
-            }
             double weight = greatCircleDistance(latitude1,longitude1,latitude2,longitude2);
             themap.at(srcID).push_back(edgeroute(airline,airlineID,src,srcID,dest,destID,weight));
 
@@ -343,6 +361,15 @@ void addEdges(map<airportnode,vector<edgeroute>> &themap)
 
 }
 
+
+/**
+ * @brief greatCircleDistance
+ * @param lat1
+ * @param long1
+ * @param lat2
+ * @param long2
+ * @return distance between airport 1 and 2
+ */
 double greatCircleDistance(double lat1, double long1, double lat2, double long2)
 {
 
